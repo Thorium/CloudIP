@@ -32,3 +32,5 @@ let checkedIps = CloudIP.checkIps [| "123.123.123.123"; "173.245.48.15" |]
 checkedIps |> Array.iter(fun res -> printfn "%O" res)
 
 ```
+
+Nuget: https://www.nuget.org/packages/CloudIP/
