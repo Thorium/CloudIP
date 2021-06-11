@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31129.286
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "CloudIP", "CloudIP.fsproj", "{FFA36F62-3EA6-4C6D-9608-46E7F9A522A6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FFA36F62-3EA6-4C6D-9608-46E7F9A522A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFA36F62-3EA6-4C6D-9608-46E7F9A522A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFA36F62-3EA6-4C6D-9608-46E7F9A522A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFA36F62-3EA6-4C6D-9608-46E7F9A522A6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6A2B6A5B-A0C7-4401-A9EB-459528822C55}
+	EndGlobalSection
+EndGlobal
