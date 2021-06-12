@@ -145,7 +145,7 @@ module Cloudservices =
         ipv4s
 
     let checkIp(ip:string) =
-        if String.IsNullOrWhiteSpace ip || ip.Length < 3 || ip.Length > 15 then
+        if String.IsNullOrWhiteSpace ip || ip.Length < 3 || ip.Length > 15 || not(ip.Contains ".") then
             // Not supported IP
             false, None
         else
