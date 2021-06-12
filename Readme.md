@@ -1,12 +1,12 @@
 Cloud IP
 ========
 
-This is a project that checks if an IP is within a known IP-address range of a cloud provider.
+This is a project that checks if an IP is within a known IP-address range of cloud service providers.
 
 The intention of this library is just to gather data of user behaviour.
 
 If you think security-wise, a firewall rule is probably a better option.
-Or buy the DNS/IPWHOIS lookup database records.
+Or buy the DNS/WHOIS lookup database records.
 
 Currently supported IP-address ranges to identify:
 
