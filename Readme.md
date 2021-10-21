@@ -25,10 +25,10 @@ Supports only IPv4 for now.
 Usage:
 ```fsharp
 // Single:
-let found, provider = CloudIP.checkIp "192.168.1.0"
+let found, provider = CloudIP.Cloudservices.checkIp "192.168.1.0"
 
 // Multiple:
-let checkedIps = CloudIP.checkIps [| "123.123.123.123"; "173.245.48.15" |]
+let checkedIps = CloudIP.Cloudservices.checkIps [| "123.123.123.123"; "173.245.48.15" |]
 checkedIps |> Array.iter(fun res -> printfn "%O" res)
 
 ```
