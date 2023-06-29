@@ -23,8 +23,8 @@ module IP_Parsing =
     
   let ipOfInt (d : uint32) = 
     BitConverter.GetBytes d
-    |> Array.rev 
-    |> fun e -> IPAddress e
+    |> Array.rev
+    |> IPAddress
     |> string
 
   let slice (d : string) (iden : string array) = 
@@ -115,7 +115,7 @@ module Cloudservices =
     let cloudFlares =
         let ipsFile = Uri "https://www.cloudflare.com/ips-v4"
         let data = GetIPList.fetch ipsFile
-        let ip_list = data.Replace("\r", "").Split('\n') |> Array.filter(fun ip -> not(String.IsNullOrEmpty ip))
+        let ip_list = data.Replace("\r", "").Split('\n') |> Array.filter(String.IsNullOrEmpty >> not)
         ip_list 
         |> Array.filter(fun ipv4 -> ipv4.Contains(".")) // For now, IPv4 only
         |> Array.map IP_Parsing.uintsOfCidrs
