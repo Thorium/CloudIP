@@ -16,11 +16,13 @@ module IP_Parsing =
   open System
   open System.Net
 
+  [<Struct>]
   type IPvNetwrok =
-  | IPv4
- // No native support yet:
-// | IPv6 of uint128
-  
+  | IPv4 = 0
+ // No native support yet, would require uint128:
+  | IPv6 = 1
+
+
   let intOfIp (s : string) =
     let parsed = IPAddress.Parse(s.Trim())
 
@@ -32,13 +34,13 @@ module IP_Parsing =
             convertedIpV4.GetAddressBytes()
             |> Array.rev
             |> fun e -> BitConverter.ToUInt32 (e, 0)
-        IPv4, i
+        struct (IPvNetwrok.IPv4, i)
     | _ (* System.Net.Sockets.AddressFamily.InterNetwork *) ->
         let i = 
             parsed.GetAddressBytes()
             |> Array.rev
             |> fun e -> BitConverter.ToUInt32 (e, 0)
-        IPv4, i 
+        struct (IPvNetwrok.IPv4, i)
     
   let ipOfInt (d : uint32) = 
     BitConverter.GetBytes d
@@ -57,7 +59,7 @@ module IP_Parsing =
     let start,finish = intOfIp elem.[0], intOfIp elem.[1]
     match intOfIp elem.[0], intOfIp elem.[1] with
     | (ipvType1, start), (ipvType2, finish) when ipvType1 = ipvType2 -> ipvType1, ipArrayOfIntRange start finish
-    | _ -> IPv4, Array.empty // no mixed networks
+    | _ -> IPvNetwrok.IPv4, Array.empty // no mixed networks
     
   (* "192.168.1.1/24" -> ["192.168.1.1 .. 192.168.1.254"] *)
   let ipsOfCidrs (d : string) =
@@ -66,7 +68,7 @@ module IP_Parsing =
     let lsn x = (1 <<< 32 - x) - 1 |> (~~~)    |> uint32
     let cidr  = Array.get elem 1   |> int
     let mask  = cidr |> int        |> lsn
-    let ipvn, ipOfInt = elem |> Seq.head |> intOfIp
+    let struct(ipvn, ipOfInt) = elem |> Seq.head |> intOfIp
     let addr  = ipOfInt |> (&&&) mask
     let start,finish = addr + 1u, addr + ~~~mask - 1u
 
@@ -84,16 +86,18 @@ module IP_Parsing =
     let lsn x = (1 <<< 32 - x) - 1 |> (~~~)    |> uint32
     let cidr  = Array.get elem 1   |> int
     let mask  = cidr |> int        |> lsn
-    let ipvn, ipOfInt = elem |> Seq.head |> intOfIp
+    let struct(ipvn, ipOfInt) = elem |> Seq.head |> intOfIp
     let addr  = ipOfInt |> (&&&) mask
     let start,finish = addr + 1u, addr + ~~~mask - 1u
-    let limit = match ipvn with | IPv4 -> 30 //| _ -> 60
+    let limit = match ipvn with | IPvNetwrok.IPv4 -> 30 | _ -> 60
 
-    if cidr > limit then ipvn, addr, addr
-    else ipvn, start, finish
+    if cidr > limit then struct(ipvn, addr, addr)
+    else struct(ipvn, start, finish)
 
-  let isWithinRange (checkNtwrk:IPvNetwrok, ipAsInt:uint32) (ranges:(IPvNetwrok*uint32*uint32)[]) =
-    ranges |> Array.exists(fun (nwrk, start, finish) -> nwrk = checkNtwrk && ipAsInt >= start && ipAsInt <= finish)
+  let isWithinRange itm (ranges:struct(IPvNetwrok*uint32*uint32) Set) =
+    let struct(checkNtwrk, ipAsInt) = itm
+    ranges |> Set.exists(fun struct(nwrk, start, finish) -> nwrk = checkNtwrk && ipAsInt >= start && ipAsInt <= finish)
+    
 
 type SupportedCloudServices =
 | InvalidIp
@@ -126,13 +130,14 @@ module Cloudservices =
             "10.0.0.0/8" |> IP_Parsing.uintsOfCidrs;
             "172.16.0.0/12" |> IP_Parsing.uintsOfCidrs;
             "192.168.0.0/16" |> IP_Parsing.uintsOfCidrs
-        |]
+        |] |> Set.ofArray
 
     let fastlyCDN = 
         let ranges = FastlyData.Load "https://api.fastly.com/public-ip-list"
         let ipv4s = ranges.Addresses |> Array.map IP_Parsing.uintsOfCidrs
         //let ipv6s = ranges.Ipv6Addresses |> Array.map IP_Parsing.uintsOfCidrs
         ipv4s //Array.concat [ ipv4s ; ipv6s]
+        |> Set.ofArray
 
     let cloudFlares =
         let data4 = "https://www.cloudflare.com/ips-v4" |> Uri |> GetIPList.fetch
@@ -141,6 +146,7 @@ module Cloudservices =
         //let ip_list6 = data6.Replace("\r", "").Split('\n') |> Array.filter(String.IsNullOrEmpty >> not)
         ip_list4 //Array.concat [ ip_list4 ; ip_list6 ]
         |> Array.map IP_Parsing.uintsOfCidrs
+        |> Set.ofArray
 
     let aws =
         let data = AWSDAta.Load "https://ip-ranges.amazonaws.com/ip-ranges.json"
@@ -150,8 +156,8 @@ module Cloudservices =
             |> Array.distinct
         let ipv4s = 
             ranges // Will take a while, there are like 5M of them
-            |> Array.map IP_Parsing.uintsOfCidrs
-        ipv4s |> Array.distinct
+            |> Array.map IP_Parsing.uintsOfCidrs |> Set.ofArray
+        ipv4s
 
     let gitHub =
         let data = GithubData.Load "https://api.github.com/meta"
@@ -163,7 +169,7 @@ module Cloudservices =
                 data.Api;
             ] |> Array.distinct
         let ipv4s = 
-            ranges |> Array.map IP_Parsing.uintsOfCidrs |> Array.distinct
+            ranges |> Array.map IP_Parsing.uintsOfCidrs |> Set.ofArray
         ipv4s
 
     let checkIp(ip:string) =
@@ -209,7 +215,10 @@ module Cloudservices =
     //        0
     //    else
     //        printfn "Checking IP(s)..."
+    //        let sw = System.Diagnostics.Stopwatch.StartNew()
     //        let checkedIps = checkIps argv
     //        checkedIps |> Array.iter(fun res -> printfn "%O" res)
+    //        sw.Stop()
+    //        printfn "%O" sw.Elapsed.TotalMilliseconds
     //        0
 
