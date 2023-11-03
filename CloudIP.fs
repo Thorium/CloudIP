@@ -5,12 +5,14 @@ module GetIPList =
     open System.IO
     open System.Net
 
-    let fetch (url : Uri) = 
-        let req = WebRequest.Create (url) :?> HttpWebRequest
-        use stream = req.GetResponse().GetResponseStream()
-        use reader = new StreamReader(stream)
-        reader.ReadToEnd()
-
+    let fetch (url : Uri) =
+        task {
+            let req = WebRequest.Create (url) :?> HttpWebRequest
+            let! resp = req.GetResponseAsync()
+            use stream = resp.GetResponseStream()
+            use reader = new StreamReader(stream)
+            return reader.ReadToEnd()
+        }
 // http://fssnip.net/8K/title/ipv4-conversion-snippet
 module IP_Parsing =
   open System
@@ -72,7 +74,7 @@ module IP_Parsing =
     let addr  = ipOfInt |> (&&&) mask
     let start,finish = addr + 1u, addr + ~~~mask - 1u
 
-    let limit = match ipvn with | IPv4 -> 30 //| _ -> 60
+    let limit = match ipvn with | IPvNetwrok.IPv4 -> 30 | _ -> 60
 
     if cidr > limit then ipvn, [| elem |> Seq.head |]
     else ipvn, ipArrayOfIntRange start finish
@@ -132,45 +134,70 @@ module Cloudservices =
             "192.168.0.0/16" |> IP_Parsing.uintsOfCidrs
         |] |> Set.ofArray
 
-    let fastlyCDN = 
-        let ranges = FastlyData.Load "https://api.fastly.com/public-ip-list"
-        let ipv4s = ranges.Addresses |> Array.map IP_Parsing.uintsOfCidrs
-        //let ipv6s = ranges.Ipv6Addresses |> Array.map IP_Parsing.uintsOfCidrs
-        ipv4s //Array.concat [ ipv4s ; ipv6s]
-        |> Set.ofArray
+    let getFastlyCDN() =
+        task {
+            let! ranges = FastlyData.AsyncLoad "https://api.fastly.com/public-ip-list" |> Async.StartAsTask
+            let ipv4s = ranges.Addresses |> Array.map IP_Parsing.uintsOfCidrs
+            //let ipv6s = ranges.Ipv6Addresses |> Array.map IP_Parsing.uintsOfCidrs
+            return
+                ipv4s //Array.concat [ ipv4s ; ipv6s]
+                |> Set.ofArray
+        }
 
-    let cloudFlares =
-        let data4 = "https://www.cloudflare.com/ips-v4" |> Uri |> GetIPList.fetch
-        let ip_list4 = data4.Replace("\r", "").Split('\n') |> Array.filter(String.IsNullOrEmpty >> not)
-        //let data6 = "https://www.cloudflare.com/ips-v6" |> Uri |> GetIPList.fetch
-        //let ip_list6 = data6.Replace("\r", "").Split('\n') |> Array.filter(String.IsNullOrEmpty >> not)
-        ip_list4 //Array.concat [ ip_list4 ; ip_list6 ]
-        |> Array.map IP_Parsing.uintsOfCidrs
-        |> Set.ofArray
+    let getCloudFlares() =
+        task {
+            let! data4 = "https://www.cloudflare.com/ips-v4" |> Uri |> GetIPList.fetch
+            let ip_list4 = data4.Replace("\r", "").Split('\n') |> Array.filter(String.IsNullOrEmpty >> not)
+            //let data6 = "https://www.cloudflare.com/ips-v6" |> Uri |> GetIPList.fetch
+            //let ip_list6 = data6.Replace("\r", "").Split('\n') |> Array.filter(String.IsNullOrEmpty >> not)
+            return
+                ip_list4 //Array.concat [ ip_list4 ; ip_list6 ]
+                |> Array.map IP_Parsing.uintsOfCidrs
+                |> Set.ofArray
+        }
 
-    let aws =
-        let data = AWSDAta.Load "https://ip-ranges.amazonaws.com/ip-ranges.json"
-        let ranges = 
-            data.Prefixes 
-            |> Array.map(fun prefix -> prefix.IpPrefix)
-            |> Array.distinct
-        let ipv4s = 
-            ranges // Will take a while, there are like 5M of them
-            |> Array.map IP_Parsing.uintsOfCidrs |> Set.ofArray
-        ipv4s
+    let getAws() =
+        task {
+            let! data = AWSDAta.AsyncLoad "https://ip-ranges.amazonaws.com/ip-ranges.json" |> Async.StartAsTask
+            let ranges = 
+                data.Prefixes 
+                |> Array.map(fun prefix -> prefix.IpPrefix)
+                |> Array.distinct
+            let ipv4s = 
+                ranges // Will take a while, there are like 5M of them
+                |> Array.map IP_Parsing.uintsOfCidrs |> Set.ofArray
+            return ipv4s
+        }
 
-    let gitHub =
-        let data = GithubData.Load "https://api.github.com/meta"
-        let ranges = 
-            Array.concat [
-                data.Actions;
-                data.Web;
-                data.Pages;
-                data.Api;
-            ] |> Array.distinct
-        let ipv4s = 
-            ranges |> Array.map IP_Parsing.uintsOfCidrs |> Set.ofArray
-        ipv4s
+    let getGitHub() =
+        task {
+            let! data = GithubData.AsyncLoad "https://api.github.com/meta" |> Async.StartAsTask
+            let ranges = 
+                Array.concat [
+                    data.Actions;
+                    data.Web;
+                    data.Pages;
+                    data.Api;
+                ] |> Array.distinct
+            let ipv4s = 
+                ranges |> Array.map IP_Parsing.uintsOfCidrs |> Set.ofArray
+            return ipv4s
+        }
+
+    let fastlyCDN, cloudFlares, aws, gitHub =
+        // Start fetching as parallel:
+        let startFastlyCDN = getFastlyCDN()
+        let startAws = getAws()
+        let startGitHub = getGitHub()
+        let startCloudFlares = getCloudFlares()
+        async {
+            let! fastlyCDN = startFastlyCDN |> Async.AwaitTask
+            let! cloudFlares = startCloudFlares |> Async.AwaitTask
+            let! aws = startAws |> Async.AwaitTask
+            let! gitHub = startGitHub |> Async.AwaitTask
+            return fastlyCDN, cloudFlares, aws, gitHub
+        } |> Async.RunSynchronously
+
 
     let checkIp(ip:string) =
         if String.IsNullOrWhiteSpace ip || ip.Length < 3 || ip.Length > 46 || not(ip.Contains "." || ip.Contains ":") then
@@ -184,13 +211,13 @@ module Cloudservices =
 
         let ipInt =
             try
-                Some (IP_Parsing.intOfIp ip)
+                ValueSome (IP_Parsing.intOfIp ip)
             with
-            | :? FormatException -> None
+            | :? FormatException -> ValueNone
 
         match ipInt with
-        | None -> true, Some InvalidIp
-        | Some uIp ->
+        | ValueNone -> true, Some InvalidIp
+        | ValueSome uIp ->
 
             if (localIps |> IP_Parsing.isWithinRange uIp) then
                 true, Some LocalIp
