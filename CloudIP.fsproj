@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net5.0;netstandard2.1;net472</TargetFrameworks>
+    <!--TargetFrameworks>net48;net8.0</TargetFrameworks-->
+    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <PackageId>CloudIP</PackageId>
     <AssemblyName>CloudIP</AssemblyName>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
     <Authors>Tuomas</Authors>
     <Company>Fund Ourselves</Company>
     <PackageTags>ip address checker cloud provider cidr routing table map known service</PackageTags>
@@ -24,11 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Data" Version="6.2.0" />
+    <PackageReference Include="FSharp.Data" Version="6.3.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="7.0.401" />
+    <PackageReference Update="FSharp.Core" Version="8.0.100" />
   </ItemGroup>
 
 </Project>

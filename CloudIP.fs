@@ -118,10 +118,10 @@ type SupportedCloudServices =
 
 //  #r @"...\packages\fsharp.data\4.1.1\lib\netstandard2.0\FSharp.Data.dll";;
 
-type FastlyData = FSharp.Data.JsonProvider<"https://api.fastly.com/public-ip-list">
-type AWSDAta = FSharp.Data.JsonProvider<"https://ip-ranges.amazonaws.com/ip-ranges.json">
-//type AzureData = FSharp.Data.JsonProvider<"https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20210607.json">
-type GithubData = FSharp.Data.JsonProvider<"https://api.github.com/meta">
+type internal FastlyData = FSharp.Data.JsonProvider<"https://api.fastly.com/public-ip-list">
+type internal AWSDAta = FSharp.Data.JsonProvider<"https://ip-ranges.amazonaws.com/ip-ranges.json">
+//type internal AzureData = FSharp.Data.JsonProvider<"https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20210607.json">
+type internal GithubData = FSharp.Data.JsonProvider<"https://api.github.com/meta">
 
 module Cloudservices =
 
@@ -185,12 +185,13 @@ module Cloudservices =
         }
 
     let fastlyCDN, cloudFlares, aws, gitHub =
-        // Start fetching as parallel:
-        let startFastlyCDN = getFastlyCDN()
-        let startAws = getAws()
-        let startGitHub = getGitHub()
-        let startCloudFlares = getCloudFlares()
         async {
+            // Start fetching as parallel:
+            let startFastlyCDN = getFastlyCDN()
+            let startAws = getAws()
+            let startGitHub = getGitHub()
+            let startCloudFlares = getCloudFlares()
+
             let! fastlyCDN = startFastlyCDN |> Async.AwaitTask
             let! cloudFlares = startCloudFlares |> Async.AwaitTask
             let! aws = startAws |> Async.AwaitTask
