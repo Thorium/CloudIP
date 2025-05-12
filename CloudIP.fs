@@ -15,100 +15,102 @@ module GetIPList =
         }
 // http://fssnip.net/8K/title/ipv4-conversion-snippet
 module IP_Parsing =
-  open System
-  open System.Net
+    open System
+    open System.Net
+    open System.Net.Sockets
+    open FSharp.Data
 
-  [<Struct>]
-  type IPvNetwrok =
-  | IPv4 = 0
- // No native support yet, would require uint128:
-  | IPv6 = 1
+    [<Struct>]
+    type IPvNetwrok =
+        | IPv4 = 0
+        // No native support yet, would require uint128:
+        | IPv6 = 1
 
 
-  let intOfIp (s : string) =
-    let parsed = IPAddress.Parse(s.Trim())
+    let intOfIp (s : string) =
+        let parsed = IPAddress.Parse(s.Trim())
 
-    match parsed.AddressFamily with
-    | System.Net.Sockets.AddressFamily.InterNetworkV6 ->
-        // IPv6 is 128bit. For now, we just map it to IPv4.
-        let convertedIpV4 = parsed.MapToIPv4()
-        let i =
-            convertedIpV4.GetAddressBytes()
-            |> Array.rev
-            |> fun e -> BitConverter.ToUInt32 (e, 0)
-        struct (IPvNetwrok.IPv4, i)
-    | _ (* System.Net.Sockets.AddressFamily.InterNetwork *) ->
-        let i = 
-            parsed.GetAddressBytes()
-            |> Array.rev
-            |> fun e -> BitConverter.ToUInt32 (e, 0)
-        struct (IPvNetwrok.IPv4, i)
+        match parsed.AddressFamily with
+        | AddressFamily.InterNetworkV6 ->
+            // IPv6 is 128bit. For now, we just map it to IPv4.
+            let convertedIpV4 = parsed.MapToIPv4()
+            let i =
+                convertedIpV4.GetAddressBytes()
+                |> Array.rev
+                |> fun e -> BitConverter.ToUInt32 (e, 0)
+            struct (IPvNetwrok.IPv4, i)
+        | _ (* System.Net.Sockets.AddressFamily.InterNetwork *) ->
+            let i = 
+                parsed.GetAddressBytes()
+                |> Array.rev
+                |> fun e -> BitConverter.ToUInt32 (e, 0)
+            struct (IPvNetwrok.IPv4, i)
     
-  let ipOfInt (d : uint32) = 
-    BitConverter.GetBytes d
-    |> Array.rev
-    |> IPAddress
-    |> string
+    let ipOfInt (d : uint32) = 
+        BitConverter.GetBytes d
+        |> Array.rev
+        |> IPAddress
+        |> string
 
-  let slice (d : string) (iden : string array) = 
-    d.Split(iden, StringSplitOptions.None)
+    let slice (d : string) (iden : string array) = 
+        d.Split(iden, StringSplitOptions.None)
 
-  let ipArrayOfIntRange start finish =
-    [| for i in start .. finish -> ipOfInt i |]
+    let ipArrayOfIntRange start finish =
+        [| for i in start .. finish -> ipOfInt i |]
 
-  let ipsOfRange (d : string) = 
-    let elem = slice d [|"to"; "-"; "and"|]
-    let start,finish = intOfIp elem.[0], intOfIp elem.[1]
-    match intOfIp elem.[0], intOfIp elem.[1] with
-    | (ipvType1, start), (ipvType2, finish) when ipvType1 = ipvType2 -> ipvType1, ipArrayOfIntRange start finish
-    | _ -> IPvNetwrok.IPv4, Array.empty // no mixed networks
+    let ipsOfRange (d : string) = 
+        let elem = slice d [|"to"; "-"; "and"|]
+        let start,finish = intOfIp elem.[0], intOfIp elem.[1]
+        match intOfIp elem.[0], intOfIp elem.[1] with
+        | (ipvType1, start), (ipvType2, finish) when ipvType1 = ipvType2 -> ipvType1, ipArrayOfIntRange start finish
+        | _ -> IPvNetwrok.IPv4, Array.empty // no mixed networks
     
   (* "192.168.1.1/24" -> ["192.168.1.1 .. 192.168.1.254"] *)
-  let ipsOfCidrs (d : string) =
-    let elem  = slice d [|"/"|]
+    let ipsOfCidrs (d : string) =
+        let elem  = slice d [|"/"|]
   
-    let lsn x = (1 <<< 32 - x) - 1 |> (~~~)    |> uint32
-    let cidr  = Array.get elem 1   |> int
-    let mask  = cidr |> int        |> lsn
-    let struct(ipvn, ipOfInt) = elem |> Seq.head |> intOfIp
-    let addr  = ipOfInt |> (&&&) mask
-    let start,finish = addr + 1u, addr + ~~~mask - 1u
+        let lsn x = (1 <<< 32 - x) - 1 |> (~~~)    |> uint32
+        let cidr  = Array.get elem 1   |> int
+        let mask  = cidr |> int        |> lsn
+        let struct(ipvn, ipOfInt) = elem |> Seq.head |> intOfIp
+        let addr  = ipOfInt |> (&&&) mask
+        let start,finish = addr + 1u, addr + ~~~mask - 1u
 
-    let limit = match ipvn with | IPvNetwrok.IPv4 -> 30 | _ -> 60
+        let limit = match ipvn with | IPvNetwrok.IPv4 -> 30 | _ -> 60
 
-    if cidr > limit then ipvn, [| elem |> Seq.head |]
-    else ipvn, ipArrayOfIntRange start finish
+        if cidr > limit then ipvn, [| elem |> Seq.head |]
+        else ipvn, ipArrayOfIntRange start finish
 
 
   // Some additions, making large arrays would be too slow
 
-  let uintsOfCidrs (d : string) =
-    let elem  = slice d [|"/"|]
+    let uintsOfCidrs (d : string) =
+        let elem  = slice d [|"/"|]
     
-    let lsn x = (1 <<< 32 - x) - 1 |> (~~~)    |> uint32
-    let cidr  = Array.get elem 1   |> int
-    let mask  = cidr |> int        |> lsn
-    let struct(ipvn, ipOfInt) = elem |> Seq.head |> intOfIp
-    let addr  = ipOfInt |> (&&&) mask
-    let start,finish = addr + 1u, addr + ~~~mask - 1u
-    let limit = match ipvn with | IPvNetwrok.IPv4 -> 30 | _ -> 60
+        let lsn x = (1 <<< 32 - x) - 1 |> (~~~)    |> uint32
+        let cidr  = Array.get elem 1   |> int
+        let mask  = cidr |> int        |> lsn
+        let struct(ipvn, ipOfInt) = elem |> Seq.head |> intOfIp
+        let addr  = ipOfInt |> (&&&) mask
+        let start,finish = addr + 1u, addr + ~~~mask - 1u
+        let limit = match ipvn with | IPvNetwrok.IPv4 -> 30 | _ -> 60
 
-    if cidr > limit then struct(ipvn, addr, addr)
-    else struct(ipvn, start, finish)
+        if cidr > limit then struct(ipvn, addr, addr)
+        else struct(ipvn, start, finish)
 
-  let isWithinRange itm (ranges:struct(IPvNetwrok*uint32*uint32) Set) =
-    let struct(checkNtwrk, ipAsInt) = itm
-    ranges |> Set.exists(fun struct(nwrk, start, finish) -> nwrk = checkNtwrk && ipAsInt >= start && ipAsInt <= finish)
+    let isWithinRange itm (ranges:struct(IPvNetwrok*uint32*uint32) Set) =
+        let struct(checkNtwrk, ipAsInt) = itm
+        ranges |> Set.exists(fun struct(nwrk, start, finish) -> nwrk = checkNtwrk && ipAsInt >= start && ipAsInt <= finish)
     
 
 type SupportedCloudServices =
-| InvalidIp
-| LocalIp
-| CloudFlare
-| Fastly
-| AWS
-| GitHub
-// Todo, add services...
+    | InvalidIp
+    | LocalIp
+    | CloudFlare
+    | Fastly
+    | AWS
+    | GitHub
+    // Todo, add services...
 
 //| Azure       https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20210607.json // Will they change the file?
 //| Google      https://www.gstatic.com/ipranges/goog.json // Is this correct file?
