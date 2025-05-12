@@ -5,7 +5,7 @@
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
     <PackageId>CloudIP</PackageId>
     <AssemblyName>CloudIP</AssemblyName>
-    <Version>1.0.9</Version>
+    <Version>1.0.10</Version>
     <Authors>Tuomas</Authors>
     <Company>Fund Ourselves</Company>
     <PackageTags>ip address checker cloud provider cidr routing table map known service</PackageTags>
@@ -25,11 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Data" Version="6.4.1" />
+    <PackageReference Include="FSharp.Data" Version="6.6.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="9.0.100" />
+    <PackageReference Update="FSharp.Core" Version="9.0.202" />
   </ItemGroup>
 
 </Project>
