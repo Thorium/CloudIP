@@ -5,9 +5,9 @@ module GetIPList =
     open System.IO
     open System.Net
 
-    let fetch (url : Uri) =
+    let fetch (url: Uri) =
         task {
-            let req = WebRequest.Create (url) :?> HttpWebRequest
+            let req = WebRequest.Create url
             let! resp = req.GetResponseAsync()
             use stream = resp.GetResponseStream()
             use reader = new StreamReader(stream)
@@ -18,7 +18,6 @@ module IP_Parsing =
     open System
     open System.Net
     open System.Net.Sockets
-    open FSharp.Data
 
     [<Struct>]
     type IPvNetwrok =
@@ -27,7 +26,7 @@ module IP_Parsing =
         | IPv6 = 1
 
 
-    let intOfIp (s : string) =
+    let intOfIp (s: string) =
         let parsed = IPAddress.Parse(s.Trim())
 
         match parsed.AddressFamily with
@@ -46,27 +45,26 @@ module IP_Parsing =
                 |> fun e -> BitConverter.ToUInt32 (e, 0)
             struct (IPvNetwrok.IPv4, i)
     
-    let ipOfInt (d : uint32) = 
+    let ipOfInt (d: uint32) =
         BitConverter.GetBytes d
         |> Array.rev
         |> IPAddress
         |> string
 
-    let slice (d : string) (iden : string array) = 
+    let slice (d: string) (iden: string array) =
         d.Split(iden, StringSplitOptions.None)
 
     let ipArrayOfIntRange start finish =
         [| for i in start .. finish -> ipOfInt i |]
 
-    let ipsOfRange (d : string) = 
-        let elem = slice d [|"to"; "-"; "and"|]
-        let start,finish = intOfIp elem.[0], intOfIp elem.[1]
-        match intOfIp elem.[0], intOfIp elem.[1] with
+    let ipsOfRange d =
+        let elem = slice d [| "to"; "-"; "and" |]
+        match intOfIp elem[0], intOfIp elem[1] with
         | (ipvType1, start), (ipvType2, finish) when ipvType1 = ipvType2 -> ipvType1, ipArrayOfIntRange start finish
         | _ -> IPvNetwrok.IPv4, Array.empty // no mixed networks
     
   (* "192.168.1.1/24" -> ["192.168.1.1 .. 192.168.1.254"] *)
-    let ipsOfCidrs (d : string) =
+    let ipsOfCidrs d =
         let elem  = slice d [|"/"|]
   
         let lsn x = (1 <<< 32 - x) - 1 |> (~~~)    |> uint32
@@ -85,7 +83,7 @@ module IP_Parsing =
   // Some additions, making large arrays would be too slow
 
     let uintsOfCidrs (d : string) =
-        let elem  = slice d [|"/"|]
+        let elem  = slice d [| "/" |]
     
         let lsn x = (1 <<< 32 - x) - 1 |> (~~~)    |> uint32
         let cidr  = Array.get elem 1   |> int
@@ -131,12 +129,12 @@ module Cloudservices =
     
     let localIps = 
         [|
-            "10.0.0.0/8" |> IP_Parsing.uintsOfCidrs;
-            "172.16.0.0/12" |> IP_Parsing.uintsOfCidrs;
+            "10.0.0.0/8" |> IP_Parsing.uintsOfCidrs
+            "172.16.0.0/12" |> IP_Parsing.uintsOfCidrs
             "192.168.0.0/16" |> IP_Parsing.uintsOfCidrs
         |] |> Set.ofArray
 
-    let getFastlyCDN() =
+    let getFastlyCDN () =
         task {
             let! ranges = FastlyData.AsyncLoad "https://api.fastly.com/public-ip-list" |> Async.StartAsTask
             let ipv4s = ranges.Addresses |> Array.map IP_Parsing.uintsOfCidrs
@@ -146,10 +144,10 @@ module Cloudservices =
                 |> Set.ofArray
         }
 
-    let getCloudFlares() =
+    let getCloudFlares () =
         task {
             let! data4 = "https://www.cloudflare.com/ips-v4" |> Uri |> GetIPList.fetch
-            let ip_list4 = data4.Replace("\r", "").Split('\n') |> Array.filter(String.IsNullOrEmpty >> not)
+            let ip_list4 = data4.Replace("\r", "").Split([| '\n' |], StringSplitOptions.RemoveEmptyEntries)
             //let data6 = "https://www.cloudflare.com/ips-v6" |> Uri |> GetIPList.fetch
             //let ip_list6 = data6.Replace("\r", "").Split('\n') |> Array.filter(String.IsNullOrEmpty >> not)
             return
@@ -158,7 +156,7 @@ module Cloudservices =
                 |> Set.ofArray
         }
 
-    let getAws() =
+    let getAws () =
         task {
             let! data = AWSDAta.AsyncLoad "https://ip-ranges.amazonaws.com/ip-ranges.json" |> Async.StartAsTask
             let ranges = 
@@ -171,7 +169,7 @@ module Cloudservices =
             return ipv4s
         }
 
-    let getGitHub() =
+    let getGitHub () =
         task {
             let! data = GithubData.AsyncLoad "https://api.github.com/meta" |> Async.StartAsTask
             let ranges = 
@@ -189,10 +187,10 @@ module Cloudservices =
     let fastlyCDN, cloudFlares, aws, gitHub =
         async {
             // Start fetching as parallel:
-            let startFastlyCDN = getFastlyCDN()
-            let startAws = getAws()
-            let startGitHub = getGitHub()
-            let startCloudFlares = getCloudFlares()
+            let startFastlyCDN = getFastlyCDN ()
+            let startAws = getAws ()
+            let startGitHub = getGitHub ()
+            let startCloudFlares = getCloudFlares ()
 
             let! fastlyCDN = startFastlyCDN |> Async.AwaitTask
             let! cloudFlares = startCloudFlares |> Async.AwaitTask
@@ -202,7 +200,7 @@ module Cloudservices =
         } |> Async.RunSynchronously
 
 
-    let checkIp(ip:string) =
+    let checkIp ip =
         if String.IsNullOrWhiteSpace ip || ip.Length < 3 || ip.Length > 46 || not(ip.Contains "." || ip.Contains ":") then
             // Not an ip
             false, Some InvalidIp
@@ -234,9 +232,8 @@ module Cloudservices =
                 true, Some GitHub
             else false, None
 
-    let checkIps(ips:string[]) =
-        let res = ips |> Array.map(fun i -> i, checkIp i)
-        res
+    let checkIps ips =
+        ips |> Array.map (fun i -> i, checkIp i)
 
     //[<EntryPoint>]
     //let main argv =
