@@ -82,6 +82,19 @@ module IP_Parsing =
 
   // Some additions, making large arrays would be too slow
 
+#if NET8
+    let uintsOfCidrs (d : string) = d
+    let isWithinRange (itm:string) (ranges: string Set) =
+        let ip = IPAddress.Parse itm
+        ranges |> Set.exists(fun r ->
+            let elem  = r.Split('/', StringSplitOptions.None)
+            if elem.Length < 2 then
+                r = itm
+            else
+                System.Net.IPNetwork(IPAddress.Parse(elem[0]), Convert.ToInt32(elem[1])).Contains ip
+        )
+#else
+
     let uintsOfCidrs (d : string) =
         let elem  = slice d [| "/" |]
     
@@ -99,7 +112,7 @@ module IP_Parsing =
     let isWithinRange itm (ranges:struct(IPvNetwrok*uint32*uint32) Set) =
         let struct(checkNtwrk, ipAsInt) = itm
         ranges |> Set.exists(fun struct(nwrk, start, finish) -> nwrk = checkNtwrk && ipAsInt >= start && ipAsInt <= finish)
-    
+#endif    
 
 type SupportedCloudServices =
     | InvalidIp
@@ -210,6 +223,9 @@ module Cloudservices =
             true, Some LocalIp
         else
 
+#if NET8
+            let uIp = ip
+#else
         let ipInt =
             try
                 ValueSome (IP_Parsing.intOfIp ip)
@@ -219,7 +235,7 @@ module Cloudservices =
         match ipInt with
         | ValueNone -> true, Some InvalidIp
         | ValueSome uIp ->
-
+#endif
             if (localIps |> IP_Parsing.isWithinRange uIp) then
                 true, Some LocalIp
             elif cloudFlares |> IP_Parsing.isWithinRange uIp then

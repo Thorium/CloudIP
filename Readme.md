@@ -1,5 +1,4 @@
-Cloud IP
-========
+# Cloud IP #
 
 This is a project that checks if an IP is within a known IP-address range of cloud service providers.
 
@@ -20,7 +19,16 @@ The principle of this library is:
 - Collect the latest ip-address ranges file (CIDR routing tables) from the provider
 - Check if your given IP matches within that range.
 
-Supports only IPv4 for now.
+### NET 8.0
+
+- Supports both IPv4 and IPv6 via System.Net.IPNetwork.
+
+### NET Standard 2.0 (and .NET Framework)
+
+- Supports IPv4. 
+- Maps IPv6 to IPv4.
+
+## Usage
 
 Usage:
 ```fsharp
