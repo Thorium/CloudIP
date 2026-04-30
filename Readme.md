@@ -14,19 +14,33 @@ Currently supported IP-address ranges to identify:
 - Fastly
 - AWS
 - GitHub
+- GoogleCloud
+- Azure
+- OracleCloud
 
 The principle of this library is:
 - Collect the latest ip-address ranges file (CIDR routing tables) from the provider
 - Check if your given IP matches within that range.
 
-### NET 8.0
+### IP Support
 
-- Supports both IPv4 and IPv6 via System.Net.IPNetwork.
+- Supports both IPv4 and IPv6.
+- Uses direct CIDR range matching for both address families.
+- Treats local/private IPv4 and IPv6 ranges as `LocalIp`.
 
-### NET Standard 2.0 (and .NET Framework)
+### Provider Loading
 
-- Supports IPv4. 
-- Maps IPv6 to IPv4.
+- Provider ranges are fetched lazily on first use.
+- Raw provider feeds are cached on disk in `%LOCALAPPDATA%/CloudIP`.
+- The library refreshes provider data from the network on initial load and falls back to the cached copy if that refresh fails.
+
+### Provider Scope
+
+- `GitHub` excludes `actions` to avoid broad Azure-backed runner ranges.
+- `GoogleCloud` uses `cloud.json`, not `goog.json`.
+- `Azure` uses the `AzureCloud` service tag only.
+- `OracleCloud` uses OCI ranges tagged `OCI` only.
+- IPv6 stays conservative per provider to avoid overclaiming very broad provider allocations.
 
 ## Usage
 
