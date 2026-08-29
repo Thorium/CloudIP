@@ -15,7 +15,7 @@ module GetIPList =
     let private azureJsonExtension = ".json"
 
     let fetch (url: Uri) =
-        task { return! httpClient.GetStringAsync(url) }
+        task { return! httpClient.GetStringAsync url }
 
     let private getCachePath fileName =
         Directory.CreateDirectory(cacheDirectory) |> ignore
