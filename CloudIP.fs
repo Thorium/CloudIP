@@ -10,8 +10,11 @@ module GetIPList =
     let private azureDownloadPage = Uri "https://www.microsoft.com/en-us/download/details.aspx?id=56519"
     let private cacheDirectory =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CloudIP")
+    [<Literal>]
     let private azureUrlPrefix = "https://download.microsoft.com/download/"
+    [<Literal>]
     let private azureUrlSuffix = "/ServiceTags_Public_"
+    [<Literal>]
     let private azureJsonExtension = ".json"
 
     let fetch (url: Uri) =
@@ -104,6 +107,7 @@ module IP_Parsing =
             EndLow: uint64
         }
 
+    [<Literal>]
     let private maxIpv4 = 0xFFFFFFFFUL
 
     let private uint64OfBytes (bytes: byte array) offset =
@@ -245,13 +249,21 @@ module Cloudservices =
         }
 
     let private emptyRanges : IP_Parsing.ParsedRange array = [||]
+    [<Literal>]
     let private cloudflareCacheV4 = "cloudflare-ips-v4.txt"
+    [<Literal>]
     let private cloudflareCacheV6 = "cloudflare-ips-v6.txt"
+    [<Literal>]
     let private fastlyCache = "fastly-public-ip-list.json"
+    [<Literal>]
     let private awsCache = "aws-ip-ranges.json"
+    [<Literal>]
     let private githubCache = "github-meta.json"
+    [<Literal>]
     let private googleCloudCache = "google-cloud.json"
+    [<Literal>]
     let private azureCache = "azure-service-tags.json"
+    [<Literal>]
     let private oracleCloudCache = "oracle-cloud.json"
 
     let localIps =
