@@ -1,4 +1,5 @@
 namespace CloudIP
+open FSharp.Data
 
 module GetIPList =
     open System
@@ -69,9 +70,10 @@ module GetIPList =
                             let urlLength = extensionIndex + azureJsonExtension.Length - startIndex
                             Some (Uri(page.Substring(startIndex, urlLength)))
 
-            match maybeUrl with
-            | Some url -> return url
-            | None -> return invalidOp "Could not locate Azure Service Tags download URL."
+            return
+                match maybeUrl with
+                | Some url -> url
+                | None -> invalidOp "Could not locate Azure Service Tags download URL."
         }
 
     let fetchAzureServiceTagsJson cacheFileName =
@@ -226,12 +228,12 @@ type SupportedCloudServices =
     | Azure
     | OracleCloud
 
-type internal FastlyData = FSharp.Data.JsonProvider<"https://api.fastly.com/public-ip-list">
-type internal AwsData = FSharp.Data.JsonProvider<"https://ip-ranges.amazonaws.com/ip-ranges.json">
-type internal GithubData = FSharp.Data.JsonProvider<"https://api.github.com/meta">
-type internal GoogleCloudData = FSharp.Data.JsonProvider<"https://www.gstatic.com/ipranges/cloud.json">
-type internal AzureData = FSharp.Data.JsonProvider<"""{ "values": [ { "name": "AzureCloud", "properties": { "addressPrefixes": [ "1.1.1.0/24" ] } } ] }""">
-type internal OracleCloudData = FSharp.Data.JsonProvider<"""{ "regions": [ { "cidrs": [ { "cidr": "1.1.1.0/24", "tags": [ "OCI" ] } ] } ] }""">
+type internal FastlyData = JsonProvider<"https://api.fastly.com/public-ip-list">
+type internal AwsData = JsonProvider<"https://ip-ranges.amazonaws.com/ip-ranges.json">
+type internal GithubData = JsonProvider<"https://api.github.com/meta">
+type internal GoogleCloudData = JsonProvider<"https://www.gstatic.com/ipranges/cloud.json">
+type internal AzureData = JsonProvider<"""{ "values": [ { "name": "AzureCloud", "properties": { "addressPrefixes": [ "1.1.1.0/24" ] } } ] }""">
+type internal OracleCloudData = JsonProvider<"""{ "regions": [ { "cidrs": [ { "cidr": "1.1.1.0/24", "tags": [ "OCI" ] } ] } ] }""">
 
 module Cloudservices =
 
